@@ -18,7 +18,10 @@
     "viem": "^2.21.0",
     "wagmi": "^2.14.0",
     "clsx": "^2.1.1",
-    "tailwind-merge": "^2.5.4"
+    "tailwind-merge": "^2.5.4",
+    "@x402/core": "^2.30.0",
+    "@x402/evm": "^2.30.0",
+    "@x402/svm": "^2.30.0"
   },
   "devDependencies": {
     "@types/node": "^20",
