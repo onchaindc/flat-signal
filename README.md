@@ -29,7 +29,8 @@ Just pure attention backed by capital that disappears.
 1. Connect your wallet on Robinhood Chain
 2. Browse the live signal board
 3. Create a new signal or boost an existing one
-4. Watch the ranking update as $WIF is burned
+4. Every boost sends 100 $WIF to the burn address
+5. Ranking updates based on total burned
 
 Every boost is permanent. Every ranking is earned.
 
@@ -39,6 +40,7 @@ Every boost is permanent. Every ranking is earned.
 
 - Chain: Robinhood Chain (4663)
 - Token: $WIF `0x5173b8ea6923c2d40267890d45c46a3480954773`
+- Burn address: `0x000000000000000000000000000000000000dEaD`
 - Theme fit: Ownership + Voice in its purest form
 
 ---
@@ -54,24 +56,24 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ---
 
-### Current status (MVP)
+### Current status
 
 - ✅ Clean Next.js + wagmi + RainbowKit app
 - ✅ Real Robinhood Chain config (chain ID 4663)
-- ✅ Live signal board with ranking by $WIF burned
+- ✅ Live signal board ranked by $WIF burned
 - ✅ Create new signals
-- ✅ Boost interaction (frontend simulation for now)
-- ⏳ Real $WIF transfer / burn on boost (next)
-- ⏳ On-chain signal registry contract (optional stretch)
+- ✅ **Real $WIF transfer on Boost** (sends to burn address)
+- ✅ Shows connected wallet $WIF balance
+- ✅ Loading / error states
 
 ---
 
-### Next 1–2 hours
+### Demo flow
 
-1. Wire real $WIF transfer to burn address on Boost click
-2. Show connected wallet $WIF balance
-3. Polish mobile + add a couple more seed signals
-4. Record short demo video
+1. Connect wallet on Robinhood Chain
+2. See your $WIF balance in the header
+3. Click **Boost** on any signal → wallet prompts to send 100 $WIF to the burn address
+4. After confirmation the ranking updates
 
 Repo: https://github.com/onchaindc/flat-signal
 
