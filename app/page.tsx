@@ -1,9 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { Flame, Plus, TrendingUp } from "lucide-react";
+import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { parseUnits, formatUnits } from "viem";
+import { Flame, Plus, TrendingUp, Loader2 } from "lucide-react";
 import { formatWif } from "@/lib/utils";
+import { WIF_ADDRESS, BURN_ADDRESS, WIF_ABI } from "@/lib/chain";
 
 // Seed signals for the MVP demo
 const INITIAL_SIGNALS = [
@@ -17,12 +20,40 @@ const INITIAL_SIGNALS = [
   { id: "8", title: "GetBlock x RH", type: "Infra", description: "Enterprise RPC support", burned: 1400, createdBy: "0x..." },
 ];
 
+const BOOST_AMOUNT = "100"; // 100 $WIF per boost for demo
+
 export default function Home() {
+  const { address, isConnected } = useAccount();
   const [signals, setSignals] = useState(INITIAL_SIGNALS);
   const [showCreate, setShowCreate] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newType, setNewType] = useState("Idea");
   const [boostingId, setBoostingId] = useState<string | null>(null);
+
+  // Read $WIF balance
+  const { data: balance, refetch: refetchBalance } = useReadContract({
+    address: WIF_ADDRESS,
+    abi: WIF_ABI,
+    functionName: "balanceOf",
+    args: address ? [address] : undefined,
+    query: { enabled: !!address },
+  });
+
+  const { writeContract, data: txHash, isPending, error } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash: txHash });
+
+  // After successful burn, update local ranking and refresh balance
+  useEffect(() => {
+    if (isSuccess && boostingId) {
+      setSignals((prev) =>
+        prev.map((s) =>
+          s.id === boostingId ? { ...s, burned: s.burned + Number(BOOST_AMOUNT) } : s
+        )
+      );
+      refetchBalance();
+      setBoostingId(null);
+    }
+  }, [isSuccess, boostingId, refetchBalance]);
 
   const sorted = [...signals].sort((a, b) => b.burned - a.burned);
 
@@ -34,7 +65,7 @@ export default function Home() {
       type: newType,
       description: "Newly created signal",
       burned: 0,
-      createdBy: "you",
+      createdBy: address?.slice(0, 6) + "..." || "you",
     };
     setSignals([newSignal, ...signals]);
     setNewTitle("");
@@ -42,13 +73,19 @@ export default function Home() {
   };
 
   const handleBoost = (id: string) => {
-    // In full version this would trigger a real $WIF transfer to burn address
-    setSignals(signals.map(s =>
-      s.id === id ? { ...s, burned: s.burned + 100 } : s
-    ));
+    if (!isConnected || !address) return;
+
     setBoostingId(id);
-    setTimeout(() => setBoostingId(null), 800);
+
+    writeContract({
+      address: WIF_ADDRESS,
+      abi: WIF_ABI,
+      functionName: "transfer",
+      args: [BURN_ADDRESS, parseUnits(BOOST_AMOUNT, 18)],
+    });
   };
+
+  const wifBalance = balance ? Number(formatUnits(balance as bigint, 18)) : 0;
 
   return (
     <div className="min-h-screen">
@@ -64,7 +101,16 @@ export default function Home() {
               <p className="text-xs text-neutral-500">Attention market · Robinhood Chain</p>
             </div>
           </div>
-          <ConnectButton showBalance={false} chainStatus="icon" accountStatus="address" />
+
+          <div className="flex items-center gap-4">
+            {isConnected && (
+              <div className="hidden sm:block text-right">
+                <div className="text-xs text-neutral-500">Your $WIF</div>
+                <div className="font-mono text-sm text-accent">{wifBalance.toFixed(0)}</div>
+              </div>
+            )}
+            <ConnectButton showBalance={false} chainStatus="icon" accountStatus="address" />
+          </div>
         </div>
       </header>
 
@@ -95,7 +141,7 @@ export default function Home() {
           </button>
         </div>
 
-        {/* Create modal (simple) */}
+        {/* Create modal */}
         {showCreate && (
           <div className="mb-8 p-6 rounded-2xl border border-border bg-muted">
             <h3 className="font-semibold mb-4">Create a new signal</h3>
@@ -105,7 +151,7 @@ export default function Home() {
               placeholder="What should exist? (e.g. TSLA, a new tool, a builder...)"
               className="w-full px-4 py-3 rounded-lg bg-background border border-border mb-3 focus:outline-none focus:border-accent"
             />
-            <div className="flex gap-2 mb-4">
+            <div className="flex flex-wrap gap-2 mb-4">
               {["Stock Token", "Project", "Idea", "Builder", "Infra"].map((t) => (
                 <button
                   key={t}
@@ -137,6 +183,13 @@ export default function Home() {
           </div>
         )}
 
+        {/* Error feedback */}
+        {error && (
+          <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+            {error.message.slice(0, 120)}...
+          </div>
+        )}
+
         {/* Signal Board */}
         <div className="space-y-2">
           {sorted.map((signal, index) => (
@@ -144,12 +197,10 @@ export default function Home() {
               key={signal.id}
               className="signal-row flex items-center gap-4 p-4 rounded-xl border border-border transition-colors"
             >
-              {/* Rank */}
               <div className="w-8 text-center font-mono text-neutral-500 text-sm">
                 {index + 1}
               </div>
 
-              {/* Content */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
                   <span className="font-semibold truncate">{signal.title}</span>
@@ -160,7 +211,6 @@ export default function Home() {
                 <p className="text-sm text-neutral-500 truncate">{signal.description}</p>
               </div>
 
-              {/* Burned amount */}
               <div className="text-right">
                 <div className="font-mono font-medium text-accent">
                   {formatWif(signal.burned)} $WIF
@@ -168,23 +218,29 @@ export default function Home() {
                 <div className="text-xs text-neutral-600">burned</div>
               </div>
 
-              {/* Boost button */}
               <button
                 onClick={() => handleBoost(signal.id)}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border hover:border-accent hover:text-accent transition ${
+                disabled={!isConnected || isPending || isConfirming || boostingId === signal.id}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border hover:border-accent hover:text-accent transition disabled:opacity-50 disabled:cursor-not-allowed ${
                   boostingId === signal.id ? "bg-accent/20 text-accent" : ""
                 }`}
               >
-                <Flame className="w-4 h-4" />
-                <span className="text-sm font-medium">Boost</span>
+                {(isPending || isConfirming) && boostingId === signal.id ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Flame className="w-4 h-4" />
+                )}
+                <span className="text-sm font-medium">
+                  {(isPending || isConfirming) && boostingId === signal.id ? "Burning..." : "Boost"}
+                </span>
               </button>
             </div>
           ))}
         </div>
 
-        {/* Footer note */}
+        {/* Footer */}
         <div className="mt-16 pt-8 border-t border-border text-center text-sm text-neutral-600">
-          <p>Every boost burns $WIF permanently.</p>
+          <p>Every boost sends 100 $WIF to the burn address. Permanent.</p>
           <p className="mt-1">Ownership is not only about holding an asset — it is also about having a voice.</p>
           <p className="mt-4 text-xs">Built for the World is Flat Hackathon · Robinhood Chain</p>
         </div>
