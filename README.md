@@ -8,40 +8,38 @@ Live ranking of Stock Tokens, builders, projects and ideas — powered by real s
 
 ---
 
-### Why this exists
+### The idea
 
 Ownership is not only about holding an asset.  
 It is also about having a voice in what gets built next.
 
 Flat Signal turns that voice into a permanent, on-chain ranking.
 
-Anyone can create a signal.  
-Anyone can boost a signal by burning $WIF.  
-The more $WIF burned → the higher it ranks.
+- Anyone can create a signal
+- Anyone can boost a signal by burning $WIF
+- The more $WIF burned → the higher it ranks
 
 No likes. No follows. No algorithms.  
-Just pure attention backed by capital that disappears.
+Just pure attention backed by capital that disappears forever.
 
 ---
 
 ### How it works
 
-1. Connect your wallet on Robinhood Chain
+1. Connect your wallet on **Robinhood Chain**
 2. Browse the live signal board
-3. Create a new signal or boost an existing one
-4. Every boost sends 100 $WIF to the burn address
-5. Ranking updates based on total burned
-
-Every boost is permanent. Every ranking is earned.
+3. Create a new signal or click **Boost**
+4. Confirm the transaction → 100 $WIF is sent to the burn address
+5. Ranking updates instantly
 
 ---
 
-### Built for the World is Flat Hackathon
+### Tech
 
-- Chain: Robinhood Chain (4663)
-- Token: $WIF `0x5173b8ea6923c2d40267890d45c46a3480954773`
-- Burn address: `0x000000000000000000000000000000000000dEaD`
-- Theme fit: Ownership + Voice in its purest form
+- **Chain**: Robinhood Chain (ID 4663)
+- **Token**: $WIF `0x5173b8ea6923c2d40267890d45c46a3480954773`
+- **Burn address**: `0x000000000000000000000000000000000000dEaD`
+- Stack: Next.js 14 · wagmi · RainbowKit · Tailwind
 
 ---
 
@@ -56,25 +54,23 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ---
 
-### Current status
+### Deploy
 
-- ✅ Clean Next.js + wagmi + RainbowKit app
-- ✅ Real Robinhood Chain config (chain ID 4663)
-- ✅ Live signal board ranked by $WIF burned
-- ✅ Create new signals
-- ✅ **Real $WIF transfer on Boost** (sends to burn address)
-- ✅ Shows connected wallet $WIF balance
-- ✅ Loading / error states
+Ready for Vercel:
+
+```bash
+npx vercel
+```
+
+Or connect the repo directly at [vercel.com](https://vercel.com).
 
 ---
 
-### Demo flow
+### Built for
 
-1. Connect wallet on Robinhood Chain
-2. See your $WIF balance in the header
-3. Click **Boost** on any signal → wallet prompts to send 100 $WIF to the burn address
-4. After confirmation the ranking updates
-
-Repo: https://github.com/onchaindc/flat-signal
+**World is Flat Hackathon** — November 2026  
+$10,000 prize · Robinhood Chain
 
 Think beyond the borders. Then build beyond them.
+
+Repo: https://github.com/onchaindc/flat-signal
