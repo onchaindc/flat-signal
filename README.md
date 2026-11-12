@@ -43,9 +43,35 @@ Every boost is permanent. Every ranking is earned.
 
 ---
 
-### Status
+### Run locally
 
-MVP under construction for the World is Flat Hackathon (Nov 12, 2026).
+```bash
+npm install
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000)
+
+---
+
+### Current status (MVP)
+
+- ✅ Clean Next.js + wagmi + RainbowKit app
+- ✅ Real Robinhood Chain config (chain ID 4663)
+- ✅ Live signal board with ranking by $WIF burned
+- ✅ Create new signals
+- ✅ Boost interaction (frontend simulation for now)
+- ⏳ Real $WIF transfer / burn on boost (next)
+- ⏳ On-chain signal registry contract (optional stretch)
+
+---
+
+### Next 1–2 hours
+
+1. Wire real $WIF transfer to burn address on Boost click
+2. Show connected wallet $WIF balance
+3. Polish mobile + add a couple more seed signals
+4. Record short demo video
 
 Repo: https://github.com/onchaindc/flat-signal
 
