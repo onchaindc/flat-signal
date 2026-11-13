@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { ConnectButton, useConnectModal } from "@rainbow-me/rainbowkit";
 import {
   useAccount,
   useReadContract,
@@ -18,6 +18,8 @@ import {
   Filter,
   Sun,
   Moon,
+  Trash2,
+  Check,
 } from "lucide-react";
 import { formatWif } from "@/lib/utils";
 import { WIF_ADDRESS, BURN_ADDRESS, WIF_ABI } from "@/lib/chain";
@@ -31,6 +33,7 @@ type Signal = {
   burned: number;
   createdAt: number;
   creator?: string;
+  creatorAddress?: string;
 };
 
 const STORAGE_KEY = "flat-signal-v1";
@@ -40,6 +43,7 @@ const BOOST_OPTIONS = [10, 50, 100] as const;
 export default function Home() {
   const { theme, toggle } = useTheme();
   const { address, isConnected } = useAccount();
+  const { openConnectModal } = useConnectModal();
   const [signals, setSignals] = useState<Signal[]>([]);
   const [hydrated, setHydrated] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
@@ -49,7 +53,12 @@ export default function Home() {
   const [filter, setFilter] = useState<string>("All");
   const [boostAmount, setBoostAmount] = useState<number>(100);
   const [boostingId, setBoostingId] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2500);
+  };
 
   useEffect(() => {
     try {
@@ -86,6 +95,7 @@ export default function Home() {
         )
       );
       refetchBalance();
+      showToast(`Burned ${boostAmount} $WIF`);
       setTimeout(() => {
         setBoostingId(null);
         reset();
@@ -102,8 +112,28 @@ export default function Home() {
   const totalBurned = signals.reduce((sum, s) => sum + s.burned, 0);
   const wifBalance = balance ? Number(formatUnits(balance as bigint, 18)) : 0;
 
+  const requireWallet = () => {
+    if (!isConnected) {
+      showToast("Connect wallet first");
+      openConnectModal?.();
+      return false;
+    }
+    return true;
+  };
+
+  const handleCreateClick = () => {
+    if (!requireWallet()) return;
+    setShowCreate(true);
+  };
+
   const handleCreate = () => {
+    if (!requireWallet()) return;
     if (!newTitle.trim()) return;
+    if (newTitle.trim().length < 2) {
+      showToast("Title must be at least 2 characters");
+      return;
+    }
+
     setSignals((prev) => [
       {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -115,16 +145,34 @@ export default function Home() {
         creator: address
           ? `${address.slice(0, 6)}…${address.slice(-4)}`
           : undefined,
+        creatorAddress: address?.toLowerCase(),
       },
       ...prev,
     ]);
     setNewTitle("");
     setNewDesc("");
     setShowCreate(false);
+    showToast("Signal published");
+  };
+
+  const handleDelete = (id: string, creatorAddress?: string) => {
+    if (!isConnected || !address) {
+      requireWallet();
+      return;
+    }
+    if (
+      creatorAddress &&
+      creatorAddress.toLowerCase() !== address.toLowerCase()
+    ) {
+      showToast("You can only delete your own signals");
+      return;
+    }
+    setSignals((prev) => prev.filter((s) => s.id !== id));
+    showToast("Signal deleted");
   };
 
   const handleBoost = (id: string) => {
-    if (!isConnected || !address) return;
+    if (!requireWallet()) return;
     setBoostingId(id);
     writeContract({
       address: WIF_ADDRESS,
@@ -134,28 +182,75 @@ export default function Home() {
     });
   };
 
-  const handleShare = async () => {
+  const handleShareSignal = async (signal: Signal) => {
+    const url =
+      typeof window !== "undefined"
+        ? `${window.location.origin}?s=${encodeURIComponent(signal.id)}`
+        : "";
+    const text = `${signal.title} — ${formatWif(signal.burned)} $WIF burned on Flat Signal`;
     try {
-      await navigator.clipboard.writeText(window.location.href);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {}
+      if (navigator.share) {
+        await navigator.share({ title: signal.title, text, url });
+      } else {
+        await navigator.clipboard.writeText(`${text}\n${url}`);
+        showToast("Signal link copied");
+      }
+    } catch {
+      try {
+        await navigator.clipboard.writeText(`${text}\n${url}`);
+        showToast("Signal link copied");
+      } catch {
+        showToast("Could not share");
+      }
+    }
   };
+
+  // Deep-link: highlight signal from ?s=
+  useEffect(() => {
+    if (!hydrated || typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const sid = params.get("s");
+    if (!sid) return;
+    const el = document.getElementById(`signal-${sid}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("ring-2", "ring-green-500");
+      setTimeout(() => el.classList.remove("ring-2", "ring-green-500"), 2000);
+    }
+  }, [hydrated, signals]);
 
   if (!hydrated) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--background)" }}>
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: "var(--background)" }}
+      >
         <Loader2 className="w-6 h-6 animate-spin" style={{ color: "var(--accent)" }} />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "var(--background)", color: "var(--foreground)" }}>
-      {/* Header */}
+    <div
+      className="min-h-screen flex flex-col"
+      style={{ background: "var(--background)", color: "var(--foreground)" }}
+    >
+      {/* Toast */}
+      {toast && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[100] px-4 py-2 rounded-full text-sm font-medium shadow-lg flex items-center gap-2"
+          style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
+        >
+          <Check className="w-3.5 h-3.5" />
+          {toast}
+        </div>
+      )}
+
       <header
         className="sticky top-0 z-50 border-b backdrop-blur-xl"
-        style={{ borderColor: "var(--border)", background: "color-mix(in srgb, var(--background) 85%, transparent)" }}
+        style={{
+          borderColor: "var(--border)",
+          background: "color-mix(in srgb, var(--background) 85%, transparent)",
+        }}
       >
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -186,10 +281,9 @@ export default function Home() {
             )}
             <button
               onClick={toggle}
-              className="p-2 rounded-lg border transition hover:opacity-80"
+              className="p-2 rounded-lg border transition"
               style={{ borderColor: "var(--border)", color: "var(--muted-fg)" }}
               aria-label="Toggle theme"
-              title={theme === "dark" ? "Light mode" : "Dark mode"}
             >
               {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
@@ -199,18 +293,15 @@ export default function Home() {
       </header>
 
       <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-8">
-        {/* Hero */}
         <div className="mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">
             Attention, with skin in the game
           </h1>
           <p className="text-sm sm:text-base leading-relaxed" style={{ color: "var(--muted-fg)" }}>
             Create a signal. Boost it by burning $WIF. Highest burn ranks first.
-            No likes. No bots. Just capital that disappears.
           </p>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-3 gap-2 mb-6">
           {[
             { label: "Signals", value: signals.length, accent: false },
@@ -235,7 +326,6 @@ export default function Home() {
           ))}
         </div>
 
-        {/* Boost amount */}
         <div className="flex items-center gap-2 mb-4">
           <span className="text-xs" style={{ color: "var(--muted-fg)" }}>
             Burn per boost:
@@ -260,7 +350,6 @@ export default function Home() {
           ))}
         </div>
 
-        {/* Filters + actions */}
         <div className="flex flex-wrap items-center gap-2 mb-4">
           <div className="flex items-center gap-1 overflow-x-auto pb-1 flex-1">
             <Filter className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "var(--muted-fg)" }} />
@@ -283,42 +372,28 @@ export default function Home() {
               </button>
             ))}
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={handleShare}
-              className="p-2 rounded-lg border transition"
-              style={{ borderColor: "var(--border)", color: "var(--muted-fg)" }}
-              title="Copy link"
-            >
-              <Share2 className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setShowCreate(!showCreate)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90"
-              style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
-            >
-              <Plus className="w-4 h-4" />
-              Create
-            </button>
-          </div>
+          <button
+            onClick={handleCreateClick}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90"
+            style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
+          >
+            <Plus className="w-4 h-4" />
+            Create
+          </button>
         </div>
 
-        {copied && (
-          <div className="mb-3 text-xs" style={{ color: "var(--accent)" }}>
-            Link copied
-          </div>
-        )}
-
-        {/* Create form */}
         {showCreate && (
           <div
             className="mb-6 p-4 rounded-2xl border space-y-3"
             style={{ borderColor: "var(--border)", background: "var(--card)" }}
           >
+            <p className="text-xs" style={{ color: "var(--muted-fg)" }}>
+              Wallet required · Title min 2 chars · You can delete your own signals later
+            </p>
             <input
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
-              placeholder="Signal title (e.g. TSLA, a builder, a product…)"
+              placeholder="Signal title"
               className="w-full px-3 py-2.5 rounded-xl text-sm focus:outline-none border"
               style={{
                 background: "var(--background)",
@@ -388,8 +463,8 @@ export default function Home() {
             }}
           >
             Connect a wallet on{" "}
-            <span style={{ color: "var(--accent)" }}>Robinhood Chain</span> to
-            boost signals by burning $WIF.
+            <span style={{ color: "var(--accent)" }}>Robinhood Chain</span> to create
+            and boost signals.
           </div>
         )}
 
@@ -402,12 +477,10 @@ export default function Home() {
               color: "var(--danger)",
             }}
           >
-            Boost failed. Need $WIF on Robinhood Chain and enough balance for{" "}
-            {boostAmount} $WIF.
+            Boost failed. Need enough $WIF on Robinhood Chain for {boostAmount} $WIF.
           </div>
         )}
 
-        {/* Board */}
         {filtered.length === 0 ? (
           <div className="py-16 text-center">
             <div
@@ -418,15 +491,15 @@ export default function Home() {
             </div>
             <p className="font-medium mb-1">No signals yet</p>
             <p className="text-sm mb-4" style={{ color: "var(--muted-fg)" }}>
-              Be the first to put something on the board.
+              Connect wallet and create the first one.
             </p>
             <button
-              onClick={() => setShowCreate(true)}
+              onClick={handleCreateClick}
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold"
               style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
             >
               <Plus className="w-4 h-4" />
-              Create first signal
+              Create signal
             </button>
           </div>
         ) : (
@@ -434,21 +507,25 @@ export default function Home() {
             {filtered.map((signal, index) => {
               const isBoosting =
                 boostingId === signal.id && (isPending || isConfirming);
+              const isOwner =
+                !!address &&
+                !!signal.creatorAddress &&
+                signal.creatorAddress === address.toLowerCase();
+
               return (
                 <div
+                  id={`signal-${signal.id}`}
                   key={signal.id}
-                  className={`flex items-center gap-3 p-3.5 rounded-xl border transition ${
+                  className={`flex items-center gap-2 sm:gap-3 p-3 sm:p-3.5 rounded-xl border transition ${
                     isBoosting ? "burning" : ""
                   }`}
                   style={{
                     borderColor: isBoosting ? "var(--accent)" : "var(--border)",
-                    background: isBoosting
-                      ? "var(--accent-soft)"
-                      : "var(--card)",
+                    background: isBoosting ? "var(--accent-soft)" : "var(--card)",
                   }}
                 >
                   <div
-                    className="w-7 text-center font-mono text-xs tabular-nums"
+                    className="w-6 text-center font-mono text-xs tabular-nums flex-shrink-0"
                     style={{
                       color: index < 3 ? "var(--accent)" : "var(--muted-fg)",
                       fontWeight: index < 3 ? 600 : 400,
@@ -488,30 +565,54 @@ export default function Home() {
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => handleBoost(signal.id)}
-                    disabled={!isConnected || isPending || isConfirming}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition disabled:opacity-40"
-                    style={
-                      isBoosting
-                        ? {
-                            borderColor: "var(--accent)",
-                            background: "var(--accent-soft)",
-                            color: "var(--accent)",
-                          }
-                        : {
-                            borderColor: "var(--border)",
-                            color: "var(--muted-fg)",
-                          }
-                    }
-                  >
-                    {isBoosting ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Flame className="w-3.5 h-3.5" />
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <button
+                      onClick={() => handleShareSignal(signal)}
+                      className="p-1.5 rounded-lg border transition"
+                      style={{ borderColor: "var(--border)", color: "var(--muted-fg)" }}
+                      title="Share this signal"
+                    >
+                      <Share2 className="w-3.5 h-3.5" />
+                    </button>
+
+                    {isOwner && (
+                      <button
+                        onClick={() => handleDelete(signal.id, signal.creatorAddress)}
+                        className="p-1.5 rounded-lg border transition"
+                        style={{ borderColor: "var(--border)", color: "var(--muted-fg)" }}
+                        title="Delete your signal"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     )}
-                    <span className="hidden sm:inline">{isBoosting ? "…" : "Boost"}</span>
-                  </button>
+
+                    <button
+                      onClick={() => handleBoost(signal.id)}
+                      disabled={isPending || isConfirming}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition disabled:opacity-50"
+                      style={
+                        isBoosting
+                          ? {
+                              borderColor: "var(--accent)",
+                              background: "var(--accent-soft)",
+                              color: "var(--accent)",
+                            }
+                          : {
+                              borderColor: "var(--border)",
+                              color: "var(--muted-fg)",
+                            }
+                      }
+                    >
+                      {isBoosting ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Flame className="w-3.5 h-3.5" />
+                      )}
+                      <span className="hidden sm:inline">
+                        {isBoosting ? "…" : "Boost"}
+                      </span>
+                    </button>
+                  </div>
                 </div>
               );
             })}
