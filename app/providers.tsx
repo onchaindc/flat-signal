@@ -1,13 +1,27 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { WagmiProvider, http } from "wagmi";
+import { WagmiProvider, createConfig, http } from "wagmi";
 import {
   RainbowKitProvider,
-  getDefaultConfig,
+  connectorsForWallets,
   darkTheme,
   lightTheme,
 } from "@rainbow-me/rainbowkit";
+import {
+  metaMaskWallet,
+  rainbowWallet,
+  coinbaseWallet,
+  walletConnectWallet,
+  rabbyWallet,
+  zerionWallet,
+  trustWallet,
+  injectedWallet,
+  braveWallet,
+  okxWallet,
+  phantomWallet,
+  ledgerWallet,
+} from "@rainbow-me/rainbowkit/wallets";
 import "@rainbow-me/rainbowkit/styles.css";
 import { robinhoodChain } from "@/lib/chain";
 import { ThemeProvider, useTheme } from "@/components/theme-provider";
@@ -15,9 +29,39 @@ import { ThemeProvider, useTheme } from "@/components/theme-provider";
 const projectId =
   process.env.NEXT_PUBLIC_WC_PROJECT_ID || "a01e2f3c4d5e6f7a8b9c0d1e2f3a4b5c";
 
-const config = getDefaultConfig({
-  appName: "Flat Signal",
-  projectId,
+const connectors = connectorsForWallets(
+  [
+    {
+      groupName: "Popular",
+      wallets: [
+        metaMaskWallet,
+        rabbyWallet,
+        rainbowWallet,
+        zerionWallet,
+        coinbaseWallet,
+        trustWallet,
+      ],
+    },
+    {
+      groupName: "More",
+      wallets: [
+        injectedWallet,
+        okxWallet,
+        braveWallet,
+        phantomWallet,
+        ledgerWallet,
+        walletConnectWallet,
+      ],
+    },
+  ],
+  {
+    appName: "Flat Signal",
+    projectId,
+  }
+);
+
+const config = createConfig({
+  connectors,
   chains: [robinhoodChain],
   transports: {
     [robinhoodChain.id]: http("https://rpc.mainnet.chain.robinhood.com"),
