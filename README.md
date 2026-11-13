@@ -1,76 +1,65 @@
 # Flat Signal
 
-**The attention market on Robinhood Chain.**
+**Attention market on Robinhood Chain.**
 
-Burn $WIF to boost what actually matters.
+Burn $WIF to boost signals. Highest burn ranks first.
 
-Live ranking of Stock Tokens, builders, projects and ideas — powered by real skin in the game.
-
----
-
-### The idea
-
-Ownership is not only about holding an asset.  
-It is also about having a voice in what gets built next.
-
-Flat Signal turns that voice into a permanent, on-chain ranking.
-
-- Anyone can create a signal
-- Anyone can boost a signal by burning $WIF
-- The more $WIF burned → the higher it ranks
-
-No likes. No follows. No algorithms.  
-Just pure attention backed by capital that disappears forever.
+No likes. No algorithms. Real capital that disappears.
 
 ---
 
-### How it works
+### Features
 
-1. Connect your wallet on **Robinhood Chain**
-2. Browse the live signal board
-3. Create a new signal or click **Boost**
-4. Confirm the transaction → 100 $WIF is sent to the burn address
-5. Ranking updates instantly
-
----
-
-### Tech
-
-- **Chain**: Robinhood Chain (ID 4663)
-- **Token**: $WIF `0x5173b8ea6923c2d40267890d45c46a3480954773`
-- **Burn address**: `0x000000000000000000000000000000000000dEaD`
-- Stack: Next.js 14 · wagmi · RainbowKit · Tailwind
+- Create signals (Stock Token, Project, Idea, Builder, Infra)
+- Boost by burning real $WIF on Robinhood Chain
+- Ranked board by total burned
+- Filter by type
+- Adjustable boost size (10 / 50 / 100 $WIF)
+- Live $WIF balance
+- Share link
+- Signals persist in your browser (localStorage)
 
 ---
 
-### Run locally
+### Wallet connection (important)
+
+RainbowKit needs a **WalletConnect Cloud project ID**.
+
+1. Go to [cloud.walletconnect.com](https://cloud.walletconnect.com)
+2. Create a free project → copy the Project ID
+3. In **Vercel** → Project → Settings → Environment Variables:
+
+```
+NEXT_PUBLIC_WC_PROJECT_ID=your_project_id_here
+```
+
+4. Redeploy
+
+Without this, you will see “invalid config” when connecting.
+
+---
+
+### Chain
+
+- Robinhood Chain · ID `4663`
+- $WIF `0x5173b8ea6923c2d40267890d45c46a3480954773`
+- Burns go to `0x000000000000000000000000000000000000dEaD`
+
+---
+
+### Local
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
+Optional: create `.env.local` with `NEXT_PUBLIC_WC_PROJECT_ID=...`
 
 ---
 
-### Deploy
+### Built for World is Flat Hackathon
 
-Ready for Vercel:
+Ownership is not only about holding an asset — it is also about having a voice.
 
-```bash
-npx vercel
-```
-
-Or connect the repo directly at [vercel.com](https://vercel.com).
-
----
-
-### Built for
-
-**World is Flat Hackathon** — November 2026  
-$10,000 prize · Robinhood Chain
-
-Think beyond the borders. Then build beyond them.
-
-Repo: https://github.com/onchaindc/flat-signal
+https://github.com/onchaindc/flat-signal
