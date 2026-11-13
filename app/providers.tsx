@@ -6,14 +6,12 @@ import {
   RainbowKitProvider,
   getDefaultConfig,
   darkTheme,
+  lightTheme,
 } from "@rainbow-me/rainbowkit";
 import "@rainbow-me/rainbowkit/styles.css";
 import { robinhoodChain } from "@/lib/chain";
+import { ThemeProvider, useTheme } from "@/components/theme-provider";
 
-/**
- * Get a free projectId at https://cloud.walletconnect.com
- * Put it in Vercel as NEXT_PUBLIC_WC_PROJECT_ID for production.
- */
 const projectId =
   process.env.NEXT_PUBLIC_WC_PROJECT_ID || "a01e2f3c4d5e6f7a8b9c0d1e2f3a4b5c";
 
@@ -29,20 +27,33 @@ const config = getDefaultConfig({
 
 const queryClient = new QueryClient();
 
+function RainbowKitWithTheme({ children }: { children: React.ReactNode }) {
+  const { theme } = useTheme();
+
+  const rkTheme =
+    theme === "light"
+      ? lightTheme({
+          accentColor: "#16a34a",
+          accentColorForeground: "#fff",
+          borderRadius: "medium",
+        })
+      : darkTheme({
+          accentColor: "#22c55e",
+          accentColorForeground: "#000",
+          borderRadius: "medium",
+        });
+
+  return <RainbowKitProvider theme={rkTheme}>{children}</RainbowKitProvider>;
+}
+
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <WagmiProvider config={config}>
-      <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider
-          theme={darkTheme({
-            accentColor: "#22c55e",
-            accentColorForeground: "#000",
-            borderRadius: "medium",
-          })}
-        >
-          {children}
-        </RainbowKitProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <ThemeProvider>
+      <WagmiProvider config={config}>
+        <QueryClientProvider client={queryClient}>
+          <RainbowKitWithTheme>{children}</RainbowKitWithTheme>
+        </QueryClientProvider>
+      </WagmiProvider>
+    </ThemeProvider>
   );
 }
